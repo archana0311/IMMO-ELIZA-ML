@@ -6,7 +6,8 @@ from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
+from sklearn.ensemble import IsolationForest
+import numpy as np
 
 
 
@@ -15,10 +16,13 @@ def train():
     # Load the data
     data = pd.read_csv("data/properties.csv")
 
+    #Age of the building is calculated from the construction year
+    data['Age_of_building'] = 2024 - data['construction_year']
+
     # Define features to use
-    num_features = ["primary_energy_consumption_sqm","garden_sqm", "cadastral_income"]
-    fl_features = ["fl_terrace", "fl_floodzone"]
-    cat_features = ["province"]
+    num_features = ["primary_energy_consumption_sqm","garden_sqm", "cadastral_income", "latitude", "longitude", "Age_of_building", "total_area_sqm", "surface_land_sqm", "nbr_frontages", "nbr_bedrooms", "terrace_sqm"  ]
+    fl_features = ["fl_terrace", "fl_floodzone", "fl_swimming_pool", "fl_floodzone","fl_double_glazing" ]
+    cat_features = ['property_type', 'subproperty_type', 'region','province', 'locality','state_building','epc', 'heating_type',]
 
     # Split the data into features and target
     X = data[num_features + fl_features + cat_features]
@@ -32,28 +36,18 @@ def train():
  
     # Impute missing values using SimpleImputer
 
-    numeric_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='mean')),
-    ('scaler', StandardScaler())
-])
     imputer = SimpleImputer(strategy="mean")
     imputer.fit(X_train[num_features])
     X_train[num_features] = imputer.transform(X_train[num_features])
     X_test[num_features] = imputer.transform(X_test[num_features])
 
-
-
-    # Convert categorical columns with one-hot encoding using OneHotEncoder
+     
+ # Convert categorical columns with one-hot encoding using OneHotEncoder
     enc = OneHotEncoder()
     enc.fit(X_train[cat_features])
     X_train_cat = enc.transform(X_train[cat_features]).toarray()
     X_test_cat = enc.transform(X_test[cat_features]).toarray()
 
-  # Standardisation
-    scaler = StandardScaler()
-    scaler.fit(X_train[num_features])
-    X_train_standardized = scaler.transform(X_train[num_features])
-    X_test_standardized = scaler.transform(X_test[num_features])
 
     # Combine the numerical and one-hot encoded categorical columns
     X_train = pd.concat(
@@ -72,8 +66,7 @@ def train():
         axis=1,
     )
 
-    
-    
+        
     print(f"Features: \n {X_train.columns.tolist()}")
 
     # Train the model
